@@ -1,0 +1,28 @@
+[
+  {
+    "ContainingType": "StunServer.Controllers.WebRTCController",
+    "Method": "GetAllConnections",
+    "RelativePath": "api/WebRTC/GetAllConnections",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "StunServer.Controllers.WebRTCController",
+    "Method": "StartScreenShare",
+    "RelativePath": "api/WebRTC/StartScreenShare/{connectionId}",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "connectionId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  }
+]

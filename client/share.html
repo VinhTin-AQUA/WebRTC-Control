@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>WebRTC Screen Share</title>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+	</head>
+	<body>
+		<button id="btnStartShare" onclick="startShare()">Start Screen Share</button>
+		<button id="btnStopShare" onclick="stopShare()" disabled>Stop Screen Share</button>
+
+
+
+		
+		<script>
+			let connection = null;
+			let peerConnection = null;
+			let localStream = null;
+			let isSharing = false;
+			let hasStarted = false;
+
+			async function ensureConnection() {
+				if (!connection) {
+					connection = new signalR.HubConnectionBuilder()
+						.withUrl('https://localhost:7072/screensharehub')
+						.build();
+
+					connection.on('ReceiveSignal', async (user, data) => {
+						await handleSignal(data);
+					});
+
+					await connection.start().catch(err => console.error('Connection failed:', err));
+				} else if (connection.state !== signalR.HubConnectionState.Connected) {
+					await connection.start().catch(err => console.error('Connection failed:', err));
+				}
+			}
+
+			async function createPeer() {
+				if (peerConnection) return;
+
+				peerConnection = new RTCPeerConnection();
+
+				peerConnection.onicecandidate = event => {
+					if (event.candidate) {
+						connection.invoke('SendSignal', '', event.candidate);
+					}
+				};
+			}
+
+			async function startShare() {
+				await ensureConnection();
+				await createPeer();
+
+				try {
+					localStream = await navigator.mediaDevices.getDisplayMedia({
+						video: true,
+						audio: false,
+					});
+					localStream
+						.getTracks()
+						.forEach(track => peerConnection.addTrack(track, localStream));
+
+					const offer = await peerConnection.createOffer();
+					await peerConnection.setLocalDescription(offer);
+					await connection.invoke('SendSignal', '', offer);
+
+					isSharing = true;
+					document.getElementById('btnStartShare').disabled = true;
+					document.getElementById('btnStopShare').disabled = false;
+				} catch (err) {
+					console.error('Could not start screen share:', err);
+				}
+			}
+
+			async function stopShare() {
+				if (localStream) {
+					localStream.getTracks().forEach(track => track.stop());
+				}
+
+				if (peerConnection) {
+					peerConnection.close();
+					peerConnection = null;
+				}
+
+				document.getElementById('btnStartShare').disabled = false;
+				document.getElementById('btnStopShare').disabled = true;
+				isSharing = false;
+			}
+
+			
+
+			async function handleSignal(data) {
+				if (!peerConnection) await createPeer();
+
+				if (data.type === 'offer') {
+					await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+					const answer = await peerConnection.createAnswer();
+					await peerConnection.setLocalDescription(answer);
+					await connection.invoke('SendSignal', '', answer);
+				} else if (data.type === 'answer') {
+					await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+				} else if (data.candidate) {
+					await peerConnection.addIceCandidate(new RTCIceCandidate(data));
+				} else if (data.type === 'viewer-ready' && isSharing) {
+					// Viewer is ready, re-send offer
+					const offer = await peerConnection.createOffer();
+					await peerConnection.setLocalDescription(offer);
+					await connection.invoke('SendSignal', '', offer);
+				}
+			}
+		</script>
+	</body>
+</html>

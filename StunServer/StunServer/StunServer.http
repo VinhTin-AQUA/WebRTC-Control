@@ -1,0 +1,6 @@
+@StunServer_HostAddress = http://localhost:5163
+
+GET {{StunServer_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
