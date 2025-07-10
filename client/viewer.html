@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>WebRTC Remote Control</title>
+		<title>View Screen</title>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 	</head>
 	<body>
-		<button id="btnView" onclick="startViewer()">View Screen</button>
+		<button id="btnView" onclick="startViewer()">View Screen Share</button>
 		<button onclick="sendData()">Send</button>
 		<video id="remoteVideo" autoplay playsinline muted style="max-width: 100%"></video>
 
@@ -17,7 +17,7 @@
 			async function ensureConnection() {
 				if (!connection) {
 					connection = new signalR.HubConnectionBuilder()
-						.withUrl('https://localhost:7027/screenshare')
+						.withUrl('https://localhost:7072/screensharehub')
 						.build();
 
 					connection.on('ReceiveSignal', async (user, data) => {
@@ -71,7 +71,12 @@
 				};
 
 				dataChannel.onmessage = event => {
-					console.log('Received:', event.data);
+					try {
+                            console.log(JSON.parse(event.data));
+                        }
+                        catch {
+                            console.log(event.data);
+                        }
 				};
 
 				dataChannel.onerror = error => {
@@ -88,13 +93,14 @@
 				await createPeer();
 				await initDataChannel();
 
+
 				const offer = await peerConnection.createOffer();
 				await peerConnection.setLocalDescription(offer);
 				await connection.invoke('SendSignal', '', offer);
 			}
 
 			async function handleSignal(data) {
-                console.log(data);
+                // console.log(data);
                 
 				if (!peerConnection) await createPeer();
 
@@ -119,8 +125,8 @@
 				}
 			}
 
-            async function sendData() {
-                dataChannel.send('Data from admin');
+            async function sendData(data) {
+                dataChannel.send(JSON.stringify(data));
             }
 
 			window.addEventListener('DOMContentLoaded', () => {

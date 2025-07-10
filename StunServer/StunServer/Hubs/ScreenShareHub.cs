@@ -12,7 +12,7 @@ namespace StunServer.Hubs
             UserConnections[Context.ConnectionId] = Context.ConnectionId;
         }
 
-        public override async Task OnDisconnectedAsync(Exception exception)
+        public override async Task OnDisconnectedAsync(Exception? exception)
         {
             await base.OnDisconnectedAsync(exception);
             UserConnections.Remove(Context.ConnectionId);

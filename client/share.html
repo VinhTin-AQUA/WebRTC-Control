@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>WebRTC Screen Share</title>
+		<title>Share Screen</title>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 	</head>
 	<body>
@@ -15,10 +15,18 @@
 			let localStream = null;
 			let receivedChannel = null;
 
+			const Status = Object.freeze({
+				PENDING: Symbol('PENDING'),
+				SUCCESS: Symbol('SUCCESS'),
+				ERROR: Symbol('ERROR'),
+			});
+
+            
+
 			async function ensureConnection() {
 				if (!connection) {
 					connection = new signalR.HubConnectionBuilder()
-						.withUrl('https://localhost:7027/screenshare')
+						.withUrl('https://localhost:7072/screensharehub')
 						.build();
 
 					connection.on('ReceiveSignal', async (user, data) => {
@@ -63,7 +71,11 @@
 					};
 
 					receivedChannel.onmessage = event => {
-						console.log('Sharer received:', event.data);
+						try {
+							console.log(JSON.parse(event.data));
+						} catch {
+							console.log(event.data);
+						}
 					};
 
 					receivedChannel.onclose = () => {
@@ -79,6 +91,7 @@
 			async function startShare() {
 				await ensureConnection();
 				await createPeer();
+				await sendData({ screenWidth: screen.width, screenHeight: screen.height });
 
 				try {
 					localStream = await navigator.mediaDevices.getDisplayMedia({
@@ -133,9 +146,9 @@
 				}
 			}
 
-            async function sendData() {
-                receivedChannel.send('data from sharer');
-            }
+			async function sendData(data) {
+				receivedChannel.send(JSON.stringify(data));
+			}
 
 			window.addEventListener('DOMContentLoaded', () => {
 				ensureConnection().catch(err => console.error('Connection error:', err));
