@@ -1,26 +1,23 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>WebRTC Screen Share</title>
+		<title>WebRTC Remote Control</title>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 	</head>
 	<body>
 		<button id="btnView" onclick="startViewer()">View Screen</button>
-
-		<h3>Remote (Screen you're viewing):</h3>
-		<video id="remoteVideo" autoplay playsinline muted  style="max-width: 100%"></video>
+		<button onclick="sendData()">Send</button>
+		<video id="remoteVideo" autoplay playsinline muted style="max-width: 100%"></video>
 
 		<script>
 			let connection = null;
 			let peerConnection = null;
-			let localStream = null;
-			let isSharing = false;
-			let hasStarted = false;
+			let dataChannel = null;
 
 			async function ensureConnection() {
 				if (!connection) {
 					connection = new signalR.HubConnectionBuilder()
-						.withUrl('https://localhost:7072/screensharehub')
+						.withUrl('https://localhost:7027/screenshare')
 						.build();
 
 					connection.on('ReceiveSignal', async (user, data) => {
@@ -36,7 +33,18 @@
 			async function createPeer() {
 				if (peerConnection) return;
 
-				peerConnection = new RTCPeerConnection();
+				peerConnection = new RTCPeerConnection({
+					iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+				});
+
+				// Debug connection states
+				peerConnection.oniceconnectionstatechange = () => {
+					console.log('ICE Connection State:', peerConnection.iceConnectionState);
+				};
+
+				peerConnection.onconnectionstatechange = () => {
+					console.log('Connection State:', peerConnection.connectionState);
+				};
 
 				peerConnection.onicecandidate = event => {
 					if (event.candidate) {
@@ -45,22 +53,49 @@
 				};
 
 				peerConnection.ontrack = event => {
+					console.log('Received remote stream');
 					document.getElementById('remoteVideo').srcObject = event.streams[0];
+				};
+			}
+
+			async function initDataChannel() {
+				dataChannel = peerConnection.createDataChannel('remote-control', {
+					ordered: true,
+					maxRetransmits: 3,
+				});
+
+				dataChannel.onopen = () => {
+					console.log('DataChannel opened!');
+					// Test send message
+					dataChannel.send('Hello from Viewer!');
+				};
+
+				dataChannel.onmessage = event => {
+					console.log('Received:', event.data);
+				};
+
+				dataChannel.onerror = error => {
+					console.error('DataChannel error:', error);
+				};
+
+				dataChannel.onclose = () => {
+					console.log('DataChannel closed');
 				};
 			}
 
 			async function startViewer() {
 				await ensureConnection();
 				await createPeer();
+				await initDataChannel();
 
-				if (!hasStarted) {
-					// Send dummy "viewer ready" signal
-					await connection.invoke('SendSignal', '', { type: 'viewer-ready' });
-					hasStarted = true;
-				}
+				const offer = await peerConnection.createOffer();
+				await peerConnection.setLocalDescription(offer);
+				await connection.invoke('SendSignal', '', offer);
 			}
 
 			async function handleSignal(data) {
+                console.log(data);
+                
 				if (!peerConnection) await createPeer();
 
 				if (data.type === 'offer') {
@@ -71,7 +106,11 @@
 				} else if (data.type === 'answer') {
 					await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
 				} else if (data.candidate) {
-					await peerConnection.addIceCandidate(new RTCIceCandidate(data));
+                    try {
+						await peerConnection.addIceCandidate(new RTCIceCandidate(data));
+					} catch (e) {
+						console.error('Error adding ICE candidate:', e);
+					}
 				} else if (data.type === 'viewer-ready' && isSharing) {
 					// Viewer is ready, re-send offer
 					const offer = await peerConnection.createOffer();
@@ -80,10 +119,12 @@
 				}
 			}
 
-			// GỌI KHI TRANG ĐÃ SẴN SÀNG
+            async function sendData() {
+                dataChannel.send('Data from admin');
+            }
+
 			window.addEventListener('DOMContentLoaded', () => {
-				startViewer().then().catch(err => console.error('❌ Viewer error:', err));
-                console.log(2);
+				startViewer().catch(err => console.error('Viewer error:', err));
 			});
 		</script>
 	</body>

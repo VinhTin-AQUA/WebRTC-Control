@@ -7,21 +7,18 @@
 	<body>
 		<button id="btnStartShare" onclick="startShare()">Start Screen Share</button>
 		<button id="btnStopShare" onclick="stopShare()" disabled>Stop Screen Share</button>
+		<button onclick="sendData()">Send</button>
 
-
-
-		
 		<script>
 			let connection = null;
 			let peerConnection = null;
 			let localStream = null;
-			let isSharing = false;
-			let hasStarted = false;
+			let receivedChannel = null;
 
 			async function ensureConnection() {
 				if (!connection) {
 					connection = new signalR.HubConnectionBuilder()
-						.withUrl('https://localhost:7072/screensharehub')
+						.withUrl('https://localhost:7027/screenshare')
 						.build();
 
 					connection.on('ReceiveSignal', async (user, data) => {
@@ -37,12 +34,45 @@
 			async function createPeer() {
 				if (peerConnection) return;
 
-				peerConnection = new RTCPeerConnection();
+				peerConnection = new RTCPeerConnection({
+					iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+				});
+
+				// Debug connection states
+				peerConnection.oniceconnectionstatechange = () => {
+					console.log('ICE Connection State:', peerConnection.iceConnectionState);
+				};
+
+				peerConnection.onconnectionstatechange = () => {
+					console.log('Connection State:', peerConnection.connectionState);
+				};
 
 				peerConnection.onicecandidate = event => {
 					if (event.candidate) {
 						connection.invoke('SendSignal', '', event.candidate);
 					}
+				};
+
+				peerConnection.ondatachannel = event => {
+					console.log('DataChannel received!');
+					receivedChannel = event.channel;
+
+					receivedChannel.onopen = () => {
+						console.log('DataChannel opened on Sharer side');
+						receivedChannel.send('Hello from Sharer!');
+					};
+
+					receivedChannel.onmessage = event => {
+						console.log('Sharer received:', event.data);
+					};
+
+					receivedChannel.onclose = () => {
+						console.log('DataChannel closed on Sharer side');
+					};
+
+					receivedChannel.onerror = error => {
+						console.error('DataChannel error:', error);
+					};
 				};
 			}
 
@@ -55,15 +85,15 @@
 						video: true,
 						audio: false,
 					});
-					localStream
-						.getTracks()
-						.forEach(track => peerConnection.addTrack(track, localStream));
+
+					localStream.getTracks().forEach(track => {
+						peerConnection.addTrack(track, localStream);
+					});
 
 					const offer = await peerConnection.createOffer();
 					await peerConnection.setLocalDescription(offer);
 					await connection.invoke('SendSignal', '', offer);
 
-					isSharing = true;
 					document.getElementById('btnStartShare').disabled = true;
 					document.getElementById('btnStopShare').disabled = false;
 				} catch (err) {
@@ -74,6 +104,7 @@
 			async function stopShare() {
 				if (localStream) {
 					localStream.getTracks().forEach(track => track.stop());
+					localStream = null;
 				}
 
 				if (peerConnection) {
@@ -83,10 +114,7 @@
 
 				document.getElementById('btnStartShare').disabled = false;
 				document.getElementById('btnStopShare').disabled = true;
-				isSharing = false;
 			}
-
-			
 
 			async function handleSignal(data) {
 				if (!peerConnection) await createPeer();
@@ -96,17 +124,22 @@
 					const answer = await peerConnection.createAnswer();
 					await peerConnection.setLocalDescription(answer);
 					await connection.invoke('SendSignal', '', answer);
-				} else if (data.type === 'answer') {
-					await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
 				} else if (data.candidate) {
-					await peerConnection.addIceCandidate(new RTCIceCandidate(data));
-				} else if (data.type === 'viewer-ready' && isSharing) {
-					// Viewer is ready, re-send offer
-					const offer = await peerConnection.createOffer();
-					await peerConnection.setLocalDescription(offer);
-					await connection.invoke('SendSignal', '', offer);
+					try {
+						await peerConnection.addIceCandidate(new RTCIceCandidate(data));
+					} catch (e) {
+						console.error('Error adding ICE candidate:', e);
+					}
 				}
 			}
+
+            async function sendData() {
+                receivedChannel.send('data from sharer');
+            }
+
+			window.addEventListener('DOMContentLoaded', () => {
+				ensureConnection().catch(err => console.error('Connection error:', err));
+			});
 		</script>
 	</body>
 </html>
