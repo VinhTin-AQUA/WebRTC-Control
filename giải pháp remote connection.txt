@@ -1,0 +1,75 @@
+- tính tỉ lệ màng hình của client so với operator
+// Lấy thẻ video ở operator
+const videoElement = document.getElementById('remoteScreen');
+
+// Tính tỉ lệ scale X và Y
+const scaleX = videoElement.videoWidth / videoElement.clientWidth;
+const scaleY = videoElement.videoHeight / videoElement.clientHeight;
+
+- Lấy tọa độ chuột trên Operator và chuyển đổi sang tọa độ thực của Client
+Khi Operator click vào thẻ <video>, bạn phải ánh xạ tọa độ sang hệ tọa độ của Client.
+
+videoElement.addEventListener('click', (event) => {
+  // Tọa độ click trên thẻ video (Operator)
+  const operatorX = event.offsetX;
+  const operatorY = event.offsetY;
+
+  // Chuyển đổi sang tọa độ thực của Client
+  const clientX = Math.round(operatorX * scaleX);
+  const clientY = Math.round(operatorY * scaleY);
+
+  console.log(`Tọa độ thực trên Client: (${clientX}, ${clientY})`);
+
+  // Gửi tọa độ này đến Client qua Data Channel (WebRTC)
+  dataChannel.send(JSON.stringify({
+    type: 'click',
+    x: clientX,
+    y: clientY
+  }));
+});
+
+- Client nhận tọa độ và thực hiện click
+Phía Client nhận tọa độ và giả lập sự kiện click tại vị trí tương ứng.
+dataChannel.onmessage = (event) => {
+  const command = JSON.parse(event.data);
+  
+  if (command.type === 'click') {
+    // Tạo sự kiện click ảo tại tọa độ (x, y)
+    const clickEvent = new MouseEvent('click', {
+      bubbles: true,
+      clientX: command.x,
+      clientY: command.y
+    });
+
+    // Kích hoạt sự kiện click
+    document.elementFromPoint(command.x, command.y).dispatchEvent(clickEvent);
+  }
+};
+
+
+???
+- lấy chiều rộng và cao của client gửi đến operator
+- operator nhận chiều cao và rộng của client để tính tỉ lệ
+- lấy tọa độ click chuột ở operator -> tính toán tỉ lệ và gửi về client thực hiện click chuột
+
+ 
+*** Window services
+đưa dữ liệu sự kiện vào: các sự kiện của chuột (click, scroll, kéo thả, ...), keyboard
+
+
+
+
+-----------
+* link hướng dẫn thêm HTTP API vào worker và tạo dịch vụ
+https://medium.com/@adinas/add-webapi-controllers-to-a-worker-service-baabd838dac2
+
+
+* tạo service trên window (cần full đường dẫn đến file exe)
+sc.exe create "My Worker Service" binpath="C:/Users/tinhv/Desktop/WorkerService1/WorkerService1/bin/Release/net8.0/publish/win-x86/WorkerService1.exe"
+
+* xóa service
+- lệnh: sc delete "My Worker Service"
+- restart lại máy
+
+
+
