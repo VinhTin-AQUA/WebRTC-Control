@@ -71,5 +71,6 @@ sc.exe create "My Worker Service" binpath="C:/Users/tinhv/Desktop/WorkerService1
 - lệnh: sc delete "My Worker Service"
 - restart lại máy
 
-
+------------
+viewer click => gửi tọa độ chuột đến hub => hub gọi api đến worker service -> worker service gọi đến app control hàm click
 

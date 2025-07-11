@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using WorkerServiceControl.Services;
 using WorkerServiceControl.Workers;
 
 namespace WorkerServiceControl
