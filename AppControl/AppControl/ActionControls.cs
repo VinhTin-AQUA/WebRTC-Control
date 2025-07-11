@@ -2,7 +2,7 @@
 
 namespace AppControl
 {
-    public static class Actions
+    public static class ActionControls
     {
         [DllImport("user32.dll")]
         static extern bool SetCursorPos(int X, int Y);

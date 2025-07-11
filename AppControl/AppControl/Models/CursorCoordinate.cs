@@ -1,6 +1,7 @@
-﻿namespace WorkerServiceControl.Models
+﻿
+namespace AppControl.Models
 {
-    public class Cursor
+    public class CursorCoordinate
     {
         public int X { get; set; }
         public int Y { get; set; }

@@ -1,42 +1,84 @@
 ﻿
-using System.IO.Pipes;
+using AppControl.Models;
+using System.Net;
+using System.Text;
+using System.Text.Json;
 
 namespace AppControl
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            Console.WriteLine("App listening for coordinates...");
+            var listener = new HttpListener();
+            listener.Prefixes.Add("http://localhost:5000/");
+            listener.Start();
+            Console.WriteLine("Listening on http://localhost:5000/");
+
             while (true)
             {
-                using (NamedPipeServerStream pipeServer = new NamedPipeServerStream("SendRightClick", PipeDirection.In))
+                var context = await listener.GetContextAsync();
+                var request = context.Request;
+                var response = context.Response;
+
+                // CORS
+                response.AddHeader("Access-Control-Allow-Origin", "*");
+                response.AddHeader("Access-Control-Allow-Headers", "Content-Type");
+                response.AddHeader("Access-Control-Allow-Methods", "GET, PUT, DELETE, POST, OPTIONS");
+
+                // Trả lời preflight (OPTIONS)
+                if (request.HttpMethod == "OPTIONS")
                 {
-                    pipeServer.WaitForConnection();
-                    using (StreamReader reader = new StreamReader(pipeServer))
-                    {
-                        string? message = reader.ReadLine(); // Expect format: "x,y"
-
-                        if (string.IsNullOrEmpty(message))
-                        {
-                            Console.WriteLine("Message null");
-                            continue;
-                        }
-
-                        if (!string.IsNullOrEmpty(message) && message.Contains(","))
-                        {
-                            var parts = message.Split(',');
-                            if (int.TryParse(parts[0], out int x) && int.TryParse(parts[1], out int y))
-                            {
-                                Console.WriteLine($"Received click at ({x}, {y})");
-                                //Actions.RightMouseClick(x, y);
-                                Actions.LeftMouseClick(x, y);
-                            }
-                        }
-                    }
+                    response.StatusCode = (int)HttpStatusCode.OK;
+                    response.Close();
+                    continue;
                 }
-            }
 
+                if (request.HttpMethod == "POST" && request.Url != null && request.Url.AbsolutePath == "/handle-click")
+                {
+                    string body; 
+                    using (var reader = new System.IO.StreamReader(request.InputStream, request.ContentEncoding))
+                    {
+                        body = await reader.ReadToEndAsync();
+                    }
+
+                    Console.WriteLine($"Received POST at /data: {body}");
+
+                    // Chuyển JSON thành đối tượng C#
+                    var data = JsonSerializer.Deserialize<CursorCoordinate>(body, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    if (data != null)
+                    {
+                        ActionControls.LeftMouseClick(data.X, data.Y);
+                    }
+
+                    var responseObject = new
+                    {
+                        status = "success",
+                        message = "Data received at /handle-click",
+                        timestamp = DateTime.UtcNow
+                    };
+
+                    string json = JsonSerializer.Serialize(responseObject);
+                    byte[] buffer = Encoding.UTF8.GetBytes(json);
+
+                    response.ContentLength64 = buffer.Length;
+                    response.ContentType = "application/json"; 
+                    response.StatusCode = (int)HttpStatusCode.OK;
+
+                    await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                }
+                else
+                {
+                    // 404 Not Found
+                    response.StatusCode = (int)HttpStatusCode.NotFound;
+                }
+
+                response.OutputStream.Close();
+            }
         }
     }
 }

@@ -72,5 +72,8 @@ sc.exe create "My Worker Service" binpath="C:/Users/tinhv/Desktop/WorkerService1
 - restart lại máy
 
 ------------
-viewer click => gửi tọa độ chuột đến hub => hub gọi api đến worker service -> worker service gọi đến app control hàm click
+viewer click => gửi tọa độ chuột đến server hub => server  hub gọi api đến worker service -> worker service gọi đến app control hàm click
+
+
+
 

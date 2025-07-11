@@ -170,14 +170,16 @@ function calcRemoteCoordinates(viewerX, viewerY) {
 	console.log(remoteX);
 	console.log(remoteY);
 
-    // clearTimeout(timeoutId);
+	// clearTimeout(timeoutId);
 	const data = {
 		type: DataType.CALC_REMOTE_COORDINATES,
-		scaleX: remoteX,
-		scaleY: remoteY,
+		scaleX: Math.round(remoteX),
+		scaleY: Math.round(remoteY),
 	};
-
-    sendData(data).then().catch((err) => console.log(err));
+    
+	sendData(data)
+		.then()
+		.catch(err => console.log(err));
 }
 
 function handleData(data) {

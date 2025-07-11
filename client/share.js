@@ -53,7 +53,8 @@ async function createPeer() {
 		receivedChannel.onmessage = event => {
 			try {
 				handleData(JSON.parse(event.data));
-			} catch {
+			} catch (ex) {
+				console.log(ex);
 				console.log(event.data);
 			}
 		};
@@ -158,7 +159,8 @@ const DataType = Object.freeze({
 function handleData(data) {
 	switch (data.type) {
 		case DataType.CALC_REMOTE_COORDINATES:
-			remoteClick(data.scaleX, data.scaleY);
+			// remoteClick(data.scaleX, data.scaleY);
+			sendMouseEventToService(data);
 			break;
 	}
 }
@@ -172,15 +174,29 @@ async function sendDemensionOfWindow() {
 	await sendData(data);
 }
 
-function remoteClick(x, y) {
-	// document.elementFromPoint(x, y).click();
-     const ev = new MouseEvent('click', {
-    'view': window,
-    'bubbles': true,
-    'cancelable': true,
-    'screenX': x,
-    'screenY': y
-  });
-  const el = document.elementFromPoint(x, y);
-  el.dispatchEvent(ev);
+// hàm click trên trình duyệt
+// function remoteClick(x, y) {
+// 	// document.elementFromPoint(x, y).click();
+// 	const ev = new MouseEvent('click', {
+// 		view: window,
+// 		bubbles: true,
+// 		cancelable: true,
+// 		screenX: x,
+// 		screenY: y,
+// 	});
+// 	const el = document.elementFromPoint(x, y);
+// 	el.dispatchEvent(ev);
+// }
+
+// gửi mouse event tới dịch vụ thực hiện tương tác
+function sendMouseEventToService(data) {
+	console.log(data.scaleX, data.scaleY);
+
+	fetch('http://localhost:5000/handle-click', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ x: data.scaleX, y: data.scaleY }),
+	})
+		.then(res => res.text())
+		.then(msg => console.log(msg));
 }
