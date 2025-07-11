@@ -153,14 +153,19 @@ clickApp();
 
 const DataType = Object.freeze({
 	INIT_SCALE: 'INIT_SCALE',
-	CALC_REMOTE_COORDINATES: 'CALC_REMOTE_COORDINATES',
+	LEFT_MOUSE_CLICK_EVENT: 'LEFT_MOUSE_CLICK_EVENT',
+	RIGHT_MOUSE_CLICK_EVENT: 'RIGHT_MOUSE_CLICK_EVENT',
 });
+
+const appControlUrl = 'http://localhost:5000';
 
 function handleData(data) {
 	switch (data.type) {
-		case DataType.CALC_REMOTE_COORDINATES:
-			// remoteClick(data.scaleX, data.scaleY);
-			sendMouseEventToService(data);
+		case DataType.LEFT_MOUSE_CLICK_EVENT:
+			sendLeftMouseClickToService(data);
+			break;
+		case DataType.RIGHT_MOUSE_CLICK_EVENT:
+			sendRightMouseClickToService(data);
 			break;
 	}
 }
@@ -188,11 +193,23 @@ async function sendDemensionOfWindow() {
 // 	el.dispatchEvent(ev);
 // }
 
-// gửi mouse event tới dịch vụ thực hiện tương tác
-function sendMouseEventToService(data) {
+/* gửi mouse event tới dịch vụ thực hiện tương tác */
+function sendLeftMouseClickToService(data) {
 	console.log(data.scaleX, data.scaleY);
 
-	fetch('http://localhost:5000/handle-click', {
+	fetch(appControlUrl + '/handle-left-click', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ x: data.scaleX, y: data.scaleY }),
+	})
+		.then(res => res.text())
+		.then(msg => console.log(msg));
+}
+
+function sendRightMouseClickToService(data) {
+	console.log(data.scaleX, data.scaleY);
+
+	fetch(appControlUrl + '/handle-right-click', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ x: data.scaleX, y: data.scaleY }),

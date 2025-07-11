@@ -4,7 +4,8 @@ let dataChannel = null;
 
 const DataType = Object.freeze({
 	INIT_SCALE: 'INIT_SCALE',
-	CALC_REMOTE_COORDINATES: 'CALC_REMOTE_COORDINATES',
+	LEFT_MOUSE_CLICK_EVENT: 'LEFT_MOUSE_CLICK_EVENT',
+	RIGHT_MOUSE_CLICK_EVENT: 'RIGHT_MOUSE_CLICK_EVENT',
 });
 
 let scaleX = 0;
@@ -137,12 +138,17 @@ function DOMContentLoadedEvent() {
 	});
 }
 
+// bắt sự kiện chuột (click chuột trái, phải, scroll)
 function remoteVideoEvent() {
-	videoElement.addEventListener('click', event => {
+	videoElement.addEventListener('mousedown', event => {
 		const operatorX = event.offsetX;
 		const operatorY = event.offsetY;
 		// console.log(`Tọa độ thực trên Client: (${operatorX}, ${operatorY})`);
-		calcRemoteCoordinates(operatorX, operatorY);
+		sendMouseClickEvent(operatorX, operatorY, event.button);
+	});
+
+	videoElement.addEventListener('contextmenu', event => {
+		event.preventDefault(); // Ngăn hiển thị menu chuột phải
 	});
 }
 
@@ -163,7 +169,16 @@ function calcScaleScreen() {
 	}, 3000);
 }
 
-function calcRemoteCoordinates(viewerX, viewerY) {
+function handleData(data) {
+	switch (data.type) {
+		case DataType.INIT_SCALE:
+			initScaler(data.screenWidth, data.screenHeight);
+			break;
+	}
+}
+
+/* mouse event */
+function sendMouseClickEvent(viewerX, viewerY, mouseType) {
 	const remoteX = viewerX / scaleX;
 	const remoteY = viewerY / scaleY;
 
@@ -172,20 +187,17 @@ function calcRemoteCoordinates(viewerX, viewerY) {
 
 	// clearTimeout(timeoutId);
 	const data = {
-		type: DataType.CALC_REMOTE_COORDINATES,
+		type:
+			mouseType == 0
+				? DataType.LEFT_MOUSE_CLICK_EVENT
+				: mouseType == 2
+				? DataType.RIGHT_MOUSE_CLICK_EVENT
+				: 2,
 		scaleX: Math.round(remoteX),
 		scaleY: Math.round(remoteY),
 	};
-    
+
 	sendData(data)
 		.then()
 		.catch(err => console.log(err));
-}
-
-function handleData(data) {
-	switch (data.type) {
-		case DataType.INIT_SCALE:
-			initScaler(data.screenWidth, data.screenHeight);
-			break;
-	}
 }

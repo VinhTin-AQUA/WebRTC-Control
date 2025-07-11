@@ -26,7 +26,7 @@ namespace AppControl
                 response.AddHeader("Access-Control-Allow-Headers", "Content-Type");
                 response.AddHeader("Access-Control-Allow-Methods", "GET, PUT, DELETE, POST, OPTIONS");
 
-                // Trả lời preflight (OPTIONS)
+                // trả lời preflight (OPTIONS)
                 if (request.HttpMethod == "OPTIONS")
                 {
                     response.StatusCode = (int)HttpStatusCode.OK;
@@ -34,42 +34,13 @@ namespace AppControl
                     continue;
                 }
 
-                if (request.HttpMethod == "POST" && request.Url != null && request.Url.AbsolutePath == "/handle-click")
+                if (request.HttpMethod == "POST" && request.Url != null && request.Url.AbsolutePath == "/handle-left-click")
                 {
-                    string body; 
-                    using (var reader = new System.IO.StreamReader(request.InputStream, request.ContentEncoding))
-                    {
-                        body = await reader.ReadToEndAsync();
-                    }
-
-                    Console.WriteLine($"Received POST at /data: {body}");
-
-                    // Chuyển JSON thành đối tượng C#
-                    var data = JsonSerializer.Deserialize<CursorCoordinate>(body, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-
-                    if (data != null)
-                    {
-                        ActionControls.LeftMouseClick(data.X, data.Y);
-                    }
-
-                    var responseObject = new
-                    {
-                        status = "success",
-                        message = "Data received at /handle-click",
-                        timestamp = DateTime.UtcNow
-                    };
-
-                    string json = JsonSerializer.Serialize(responseObject);
-                    byte[] buffer = Encoding.UTF8.GetBytes(json);
-
-                    response.ContentLength64 = buffer.Length;
-                    response.ContentType = "application/json"; 
-                    response.StatusCode = (int)HttpStatusCode.OK;
-
-                    await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                    await HandleLeftMouseClick(request, response);
+                }
+                else if (request.HttpMethod == "POST" && request.Url != null && request.Url.AbsolutePath == "/handle-right-click")
+                {
+                    await HandleRightMouseClick(request, response);
                 }
                 else
                 {
@@ -79,6 +50,82 @@ namespace AppControl
 
                 response.OutputStream.Close();
             }
+        }
+
+        public static async Task HandleLeftMouseClick(HttpListenerRequest request, HttpListenerResponse response)
+        {
+            string body;
+            using (var reader = new System.IO.StreamReader(request.InputStream, request.ContentEncoding))
+            {
+                body = await reader.ReadToEndAsync();
+            }
+
+            Console.WriteLine($"Received POST at /handle-left-click: {body}");
+
+            // Chuyển JSON thành đối tượng C#
+            var data = JsonSerializer.Deserialize<CursorCoordinate>(body, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (data != null)
+            {
+                ActionControls.LeftMouseClick(data.X, data.Y);
+            }
+
+            var responseObject = new
+            {
+                status = "success",
+                message = "Data received at /handle-left-click",
+                timestamp = DateTime.UtcNow
+            };
+
+            string json = JsonSerializer.Serialize(responseObject);
+            byte[] buffer = Encoding.UTF8.GetBytes(json);
+
+            response.ContentLength64 = buffer.Length;
+            response.ContentType = "application/json";
+            response.StatusCode = (int)HttpStatusCode.OK;
+
+            await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+        }
+
+        public static async Task HandleRightMouseClick(HttpListenerRequest request, HttpListenerResponse response)
+        {
+            string body;
+            using (var reader = new System.IO.StreamReader(request.InputStream, request.ContentEncoding))
+            {
+                body = await reader.ReadToEndAsync();
+            }
+
+            Console.WriteLine($"Received POST at /data: {body}");
+
+            // Chuyển JSON thành đối tượng C#
+            var data = JsonSerializer.Deserialize<CursorCoordinate>(body, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (data != null)
+            {
+                ActionControls.RightMouseClick(data.X, data.Y);
+            }
+
+            var responseObject = new
+            {
+                status = "success",
+                message = "Data received at /handle-right-click",
+                timestamp = DateTime.UtcNow
+            };
+
+            string json = JsonSerializer.Serialize(responseObject);
+            byte[] buffer = Encoding.UTF8.GetBytes(json);
+
+            response.ContentLength64 = buffer.Length;
+            response.ContentType = "application/json";
+            response.StatusCode = (int)HttpStatusCode.OK;
+
+            await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
         }
     }
 }
