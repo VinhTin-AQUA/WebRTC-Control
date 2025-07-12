@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace AppControl
 {
-    internal class Program
+    public class Program
     {
         static async Task Main(string[] args)
         {
@@ -42,6 +42,10 @@ namespace AppControl
                 {
                     await HandleRightMouseClick(request, response);
                 }
+                else if (request.HttpMethod == "POST" && request.Url != null && request.Url.AbsolutePath == "/handle-mouse-scroll")
+                {
+                    await HandleMouseScroll(request, response);
+                }
                 else
                 {
                     // 404 Not Found
@@ -63,7 +67,7 @@ namespace AppControl
             Console.WriteLine($"Received POST at /handle-left-click: {body}");
 
             // Chuyển JSON thành đối tượng C#
-            var data = JsonSerializer.Deserialize<CursorCoordinate>(body, new JsonSerializerOptions
+            var data = JsonSerializer.Deserialize<MouseClick>(body, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
@@ -101,7 +105,7 @@ namespace AppControl
             Console.WriteLine($"Received POST at /data: {body}");
 
             // Chuyển JSON thành đối tượng C#
-            var data = JsonSerializer.Deserialize<CursorCoordinate>(body, new JsonSerializerOptions
+            var data = JsonSerializer.Deserialize<MouseClick>(body, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
@@ -109,6 +113,49 @@ namespace AppControl
             if (data != null)
             {
                 ActionControls.RightMouseClick(data.X, data.Y);
+            }
+
+            var responseObject = new
+            {
+                status = "success",
+                message = "Data received at /handle-right-click",
+                timestamp = DateTime.UtcNow
+            };
+
+            string json = JsonSerializer.Serialize(responseObject);
+            byte[] buffer = Encoding.UTF8.GetBytes(json);
+
+            response.ContentLength64 = buffer.Length;
+            response.ContentType = "application/json";
+            response.StatusCode = (int)HttpStatusCode.OK;
+
+            await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+        }
+
+        public static async Task HandleMouseScroll(HttpListenerRequest request, HttpListenerResponse response)
+        {
+            string body;
+            using (var reader = new System.IO.StreamReader(request.InputStream, request.ContentEncoding))
+            {
+                body = await reader.ReadToEndAsync();
+            }
+
+            Console.WriteLine($"Received POST at /data: {body}");
+
+            // Chuyển JSON thành đối tượng C#
+            var data = JsonSerializer.Deserialize<MouseScroll>(body, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (data != null)
+            {
+                // di chuyển trỏ chuột đến vị trí cần scroll
+                //ActionControls.SetMousePos(data.MouseX, data.MouseY);
+
+                // scroll
+                ActionControls.ScrollHorizontal(data.DeltaX);
+                ActionControls.ScrollVerticle(data.DeltaY);
             }
 
             var responseObject = new

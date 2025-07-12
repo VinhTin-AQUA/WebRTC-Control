@@ -6,6 +6,7 @@ const DataType = Object.freeze({
 	INIT_SCALE: 'INIT_SCALE',
 	LEFT_MOUSE_CLICK_EVENT: 'LEFT_MOUSE_CLICK_EVENT',
 	RIGHT_MOUSE_CLICK_EVENT: 'RIGHT_MOUSE_CLICK_EVENT',
+	MOUSE_SCROLL_EVENT: 'MOUSE_SCROLL_EVENT',
 });
 
 let scaleX = 0;
@@ -150,6 +151,12 @@ function remoteVideoEvent() {
 	videoElement.addEventListener('contextmenu', event => {
 		event.preventDefault(); // Ngăn hiển thị menu chuột phải
 	});
+
+	videoElement.addEventListener('wheel', event => {
+		console.log(`Delta Y: ${event.deltaY}, Delta X: ${event.deltaX}`);
+        
+		sendMouseScrollEvent(event.deltaX, event.deltaY, event.clientX, event.clientY);
+	});
 }
 
 DOMContentLoadedEvent();
@@ -195,6 +202,20 @@ function sendMouseClickEvent(viewerX, viewerY, mouseType) {
 				: 2,
 		scaleX: Math.round(remoteX),
 		scaleY: Math.round(remoteY),
+	};
+
+	sendData(data)
+		.then()
+		.catch(err => console.log(err));
+}
+
+function sendMouseScrollEvent(deltaX, deltaY, clientX, clientY) {
+	const data = {
+		type: DataType.MOUSE_SCROLL_EVENT,
+		deltaX: Math.round(deltaX),
+		deltaY: Math.round(deltaY),
+		clientX: Math.round(clientX / scaleX),
+		clientY: Math.round(clientY / scaleY),
 	};
 
 	sendData(data)

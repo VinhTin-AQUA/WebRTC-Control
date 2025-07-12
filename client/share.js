@@ -155,6 +155,7 @@ const DataType = Object.freeze({
 	INIT_SCALE: 'INIT_SCALE',
 	LEFT_MOUSE_CLICK_EVENT: 'LEFT_MOUSE_CLICK_EVENT',
 	RIGHT_MOUSE_CLICK_EVENT: 'RIGHT_MOUSE_CLICK_EVENT',
+	MOUSE_SCROLL_EVENT: 'MOUSE_SCROLL_EVENT',
 });
 
 const appControlUrl = 'http://localhost:5000';
@@ -166,6 +167,11 @@ function handleData(data) {
 			break;
 		case DataType.RIGHT_MOUSE_CLICK_EVENT:
 			sendRightMouseClickToService(data);
+			break;
+		case DataType.MOUSE_SCROLL_EVENT:
+			sendMouseScrollToService(data);
+			break;
+		default:
 			break;
 	}
 }
@@ -213,6 +219,18 @@ function sendRightMouseClickToService(data) {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ x: data.scaleX, y: data.scaleY }),
+	})
+		.then(res => res.text())
+		.then(msg => console.log(msg));
+}
+
+function sendMouseScrollToService(data) {
+	console.log(data.deltaX, data.deltaY);
+
+	fetch(appControlUrl + '/handle-mouse-scroll', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ deltaX: data.deltaX, deltaY: data.deltaY }),
 	})
 		.then(res => res.text())
 		.then(msg => console.log(msg));
