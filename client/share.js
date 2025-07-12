@@ -156,6 +156,7 @@ const DataType = Object.freeze({
 	LEFT_MOUSE_CLICK_EVENT: 'LEFT_MOUSE_CLICK_EVENT',
 	RIGHT_MOUSE_CLICK_EVENT: 'RIGHT_MOUSE_CLICK_EVENT',
 	MOUSE_SCROLL_EVENT: 'MOUSE_SCROLL_EVENT',
+	KEYBOARD_EVENT: 'KEYBOARD_EVENT',
 });
 
 const appControlUrl = 'http://localhost:5000';
@@ -170,6 +171,9 @@ function handleData(data) {
 			break;
 		case DataType.MOUSE_SCROLL_EVENT:
 			sendMouseScrollToService(data);
+			break;
+		case DataType.KEYBOARD_EVENT:
+			sendKeyboardToService(data);
 			break;
 		default:
 			break;
@@ -231,6 +235,18 @@ function sendMouseScrollToService(data) {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ deltaX: data.deltaX, deltaY: data.deltaY }),
+	})
+		.then(res => res.text())
+		.then(msg => console.log(msg));
+}
+
+function sendKeyboardToService(data) {
+	console.log(data.keyCode);
+
+	fetch(appControlUrl + '/handle-keyboard', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ keyCode: data.keyCode }),
 	})
 		.then(res => res.text())
 		.then(msg => console.log(msg));

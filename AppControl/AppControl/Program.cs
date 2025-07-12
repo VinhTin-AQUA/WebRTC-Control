@@ -1,4 +1,5 @@
 ﻿
+using AppControl.Controls;
 using AppControl.Models;
 using System.Net;
 using System.Text;
@@ -46,6 +47,10 @@ namespace AppControl
                 {
                     await HandleMouseScroll(request, response);
                 }
+                else if (request.HttpMethod == "POST" && request.Url != null && request.Url.AbsolutePath == "/handle-keyboard")
+                {
+                    await HandleKeyboard(request, response);
+                }
                 else
                 {
                     // 404 Not Found
@@ -74,7 +79,7 @@ namespace AppControl
 
             if (data != null)
             {
-                ActionControls.LeftMouseClick(data.X, data.Y);
+                MouseClickControl.LeftMouseClick(data.X, data.Y);
             }
 
             var responseObject = new
@@ -112,7 +117,7 @@ namespace AppControl
 
             if (data != null)
             {
-                ActionControls.RightMouseClick(data.X, data.Y);
+                MouseClickControl.RightMouseClick(data.X, data.Y);
             }
 
             var responseObject = new
@@ -154,14 +159,14 @@ namespace AppControl
                 //ActionControls.SetMousePos(data.MouseX, data.MouseY);
 
                 // scroll
-                ActionControls.ScrollHorizontal(data.DeltaX);
-                ActionControls.ScrollVerticle(data.DeltaY);
+                ScrollControls.ScrollHorizontal(data.DeltaX);
+                ScrollControls.ScrollVerticle(data.DeltaY);
             }
 
             var responseObject = new
             {
                 status = "success",
-                message = "Data received at /handle-right-click",
+                message = "Data received at /handle-mouse-scroll",
                 timestamp = DateTime.UtcNow
             };
 
@@ -174,5 +179,45 @@ namespace AppControl
 
             await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
         }
+
+        public static async Task HandleKeyboard(HttpListenerRequest request, HttpListenerResponse response)
+        {
+            string body;
+            using (var reader = new System.IO.StreamReader(request.InputStream, request.ContentEncoding))
+            {
+                body = await reader.ReadToEndAsync();
+            }
+
+            Console.WriteLine($"Received POST at /data: {body}");
+
+            // Chuyển JSON thành đối tượng C#
+            var data = JsonSerializer.Deserialize<Keyboard>(body, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (data != null)
+            {
+                KeyboardControl.SendKey(data.KeyCode);
+            }
+
+            var responseObject = new
+            {
+                status = "success",
+                message = "Data received at /handle-keyboard",
+                timestamp = DateTime.UtcNow
+            };
+
+            string json = JsonSerializer.Serialize(responseObject);
+            byte[] buffer = Encoding.UTF8.GetBytes(json);
+
+            response.ContentLength64 = buffer.Length;
+            response.ContentType = "application/json";
+            response.StatusCode = (int)HttpStatusCode.OK;
+
+            await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+        }
+
+
     }
 }

@@ -7,6 +7,7 @@ const DataType = Object.freeze({
 	LEFT_MOUSE_CLICK_EVENT: 'LEFT_MOUSE_CLICK_EVENT',
 	RIGHT_MOUSE_CLICK_EVENT: 'RIGHT_MOUSE_CLICK_EVENT',
 	MOUSE_SCROLL_EVENT: 'MOUSE_SCROLL_EVENT',
+	KEYBOARD_EVENT: 'KEYBOARD_EVENT',
 });
 
 let scaleX = 0;
@@ -141,6 +142,7 @@ function DOMContentLoadedEvent() {
 
 // bắt sự kiện chuột (click chuột trái, phải, scroll)
 function remoteVideoEvent() {
+	// mouse click
 	videoElement.addEventListener('mousedown', event => {
 		const operatorX = event.offsetX;
 		const operatorY = event.offsetY;
@@ -148,14 +150,24 @@ function remoteVideoEvent() {
 		sendMouseClickEvent(operatorX, operatorY, event.button);
 	});
 
+	// không hiện context menu trên remote khi click chuột phải
 	videoElement.addEventListener('contextmenu', event => {
 		event.preventDefault(); // Ngăn hiển thị menu chuột phải
 	});
 
+	// scroll
 	videoElement.addEventListener('wheel', event => {
 		console.log(`Delta Y: ${event.deltaY}, Delta X: ${event.deltaX}`);
-        
+
 		sendMouseScrollEvent(event.deltaX, event.deltaY, event.clientX, event.clientY);
+	});
+
+	// key board
+	videoElement.addEventListener('keydown', event => {
+		// console.log(`Bạn đã nhấn phím: ${event.key}`);
+		const hexCode = '0x' + event.key.charCodeAt(0).toString(16).toUpperCase();
+		console.log(`Mã phím: ${hexCode}`);
+        sendkeyboardEvent(hexCode);
 	});
 }
 
@@ -216,6 +228,17 @@ function sendMouseScrollEvent(deltaX, deltaY, clientX, clientY) {
 		deltaY: Math.round(deltaY),
 		clientX: Math.round(clientX / scaleX),
 		clientY: Math.round(clientY / scaleY),
+	};
+
+	sendData(data)
+		.then()
+		.catch(err => console.log(err));
+}
+
+function sendkeyboardEvent(hexCode) {
+    const data = {
+        type: DataType.KEYBOARD_EVENT,
+		keyCode: hexCode
 	};
 
 	sendData(data)
